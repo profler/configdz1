@@ -1,0 +1,3 @@
+<log><entry><action>tree</action><result>file2.txt</result></entry><entry><action>tree</action><result /></entry><entry><action>tree</action><result>dir1
+file2.txtdir2
+file1.txt</result></entry></log>

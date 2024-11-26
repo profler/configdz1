@@ -1,0 +1,15 @@
+<log><entry><action>ls</action><result>vfs_example</result></entry><entry><action>cd dir1</action><result>cd: dir1: No such directory</result></entry><entry><action>ls</action><result>vfs_example</result></entry><entry><action>tree</action><result /></entry><entry><action>tree</action><result /></entry><entry><action>tree</action><result>dir1
+  dir2
+  file1.txt
+  file2.txt</result></entry><entry><action>tree</action><result>vfs_example
+dir1
+  dir2
+  file1.txt
+  file2.txt</result></entry><entry><action>ls</action><result>vfs_example</result></entry><entry><action>tree</action><result /></entry><entry><action>tree</action><result /></entry><entry><action>tree</action><result>dir1
+  dir2
+  file1.txt
+  file2.txt</result></entry><entry><action>tree</action><result>vfs_example
+dir1
+  dir2
+  file1.txt
+  file2.txt</result></entry></log>
