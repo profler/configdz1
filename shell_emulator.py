@@ -15,13 +15,16 @@ class ShellEmulator:
         self.log_root = ET.Element("log")
 
     def setup_vfs(self):
-        # Распаковка архива TAR в виртуальную файловую систему
         if os.path.exists(self.vfs_root):
             self._clear_vfs()
         os.makedirs(self.vfs_root)
+
         with tarfile.open(self.vfs_path, 'r') as tar:
-            tar.extractall(self.vfs_root)
+            for member in tar.getmembers():
+                tar.extract(member, self.vfs_root)
+
         self.current_path = self.vfs_root
+
 
     def _clear_vfs(self):
         for root, dirs, files in os.walk(self.vfs_root, topdown=False):
