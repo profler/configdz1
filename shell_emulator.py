@@ -20,8 +20,15 @@ class ShellEmulator:
         os.makedirs(self.vfs_root)
 
         with tarfile.open(self.vfs_path, 'r') as tar:
-            for member in tar.getmembers():
-                tar.extract(member, self.vfs_root)
+            # Сохраняем информацию о членах архива без их извлечения
+            self.members = tar.getmembers()
+            self.files = {}
+            
+            for member in self.members:
+                if member.isfile():
+                    # Читаем содержимое файла в памяти
+                    file_content = tar.extractfile(member).read()
+                    self.files[member.name] = file_content
 
         self.current_path = self.vfs_root
 
