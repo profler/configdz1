@@ -43,11 +43,25 @@ class ShellEmulator:
                 os.rmdir(os.path.join(root, dir))
         os.rmdir(self.vfs_root)
 
+    def rmdir(self, folder_name):
+        """Удаляет указанный каталог, если он пустой."""
+        folder_path = os.path.join(self.current_path, folder_name)
+        
+        if any(member.name == folder_path and member.isdir() for member in self.members):
+            if not any(member.name.startswith(folder_path + '/') for member in self.members):
+
+                del self.files[folder_path]
+                self.log_action("rmdir", f"Removed directory: {folder_path}")
+                return f"Directory '{folder_name}' removed."
+            else:
+                return f"Directory '{folder_name}' is not empty and cannot be removed."
+        else:
+            return f"Directory '{folder_name}' does not exist."
+
     def log_action(self, action, result):
-        """Запись действия в XML лог."""
-        entry = ET.SubElement(self.log_root, "entry")
-        ET.SubElement(entry, "action").text = action
-        ET.SubElement(entry, "result").text = result
+        """Логирует действия (заглушка)."""
+        with open(self.log_path, 'a') as log_file:
+            log_file.write(f"{action}: {result}\n")
 
     def save_log(self):
         """Сохранение лога в файл."""
@@ -56,44 +70,51 @@ class ShellEmulator:
 
     def ls(self):
         """Список файлов и папок в текущем каталоге."""
-        result = "\n".join(os.listdir(self.current_path))
+        result = "\n".join(self.files)
         self.log_action("ls", result)
         return result
 
-    def cd(self, path):
-        """Изменение текущего каталога."""
-        target_path = os.path.join(self.current_path, path)
-        if os.path.isdir(target_path):
-            self.current_path = target_path
-            result = ""
+    def cd(self, folder_name):
+        """Сменяет текущий каталог на указанный."""
+        if folder_name == "..":
+            # Переход к родительскому каталогу
+            if self.current_path != "/":
+                self.current_path = os.path.dirname(self.current_path.rstrip('/'))
         else:
-            result = f"cd: {path}: No such directory"
-        self.log_action(f"cd {path}", result)
-        return result
+            new_path = os.path.join(self.current_path, folder_name).rstrip('/')
+            # Проверяем, существует ли каталог
+            if new_path in self.files and isinstance(self.files[new_path], dict):
+                self.current_path = new_path
+                self.log_action("cd", f"Changed directory to: {self.current_path}")
+                return f"Changed directory to '{folder_name}'."
+            else:
+                return f"Directory '{folder_name}' does not exist."
 
-    def rmdir(self, dir_name):
-        """Удаление пустой директории."""
-        target_path = os.path.join(self.current_path, dir_name)
-        if os.path.isdir(target_path):
-            os.rmdir(target_path)
-            result = ""
-        else:
-            result = f"rmdir: {dir_name}: No such directory"
-        self.log_action(f"rmdir {dir_name}", result)
-        return result
+    def tree(self, path="", level=0):
+        """Выводит структуру файлов и папок в виде дерева."""
+        result = ""
+        prefix = " " * (level * 4)  # 4 пробела на уровень вложенности
+        added_folders = set()  # Множество для отслеживания добавленных папок
 
-    def tree(self, path=None, level=0):
-        """Вывод дерева каталогов."""
-        if path is None:
-            path = self.current_path
-        tree_structure = ""
-        for entry in os.listdir(path):
-            entry_path = os.path.join(path, entry)
-            tree_structure += "  " * level + entry + "\n"
-            if os.path.isdir(entry_path):
-                tree_structure += self.tree(entry_path, level + 1)
-        self.log_action("tree", tree_structure.strip())
-        return tree_structure.strip()
+        # Получаем список файлов и папок по текущему пути
+        for member in self.members:
+            if member.name.startswith(path):
+                # Убираем путь, чтобы отобразить только имя
+                relative_path = member.name[len(path):].lstrip('/')
+                if '/' in relative_path:
+                    # Если это папка, добавляем ее в результат
+                    folder_name = relative_path.split('/')[0]
+                    if folder_name not in added_folders:
+                        result += f"{prefix}{folder_name}/\n"
+                        added_folders.add(folder_name)  # Добавляем папку в множество
+                        # Рекурсивно добавляем содержимое папки
+                        result += self.tree(f"{path}{folder_name}/", level + 1)
+                else:
+                    # Если это файл, добавляем его в результат
+                    result += f"{prefix}{relative_path}\n"
+
+        self.log_action("tree", result)
+        return result
 
     def exit(self):
         """Выход из эмулятора."""
