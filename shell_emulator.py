@@ -10,11 +10,15 @@ class ShellEmulator:
         self.log_path = log_path
         self.current_path = None
         self.vfs_root = "/tmp/vfs"  # Временная директория
+        self.files = {}  # Словарь для хранения файлов из VFS
+        self.members = []  # Список для хранения членов архива
 
         # XML логирование
         self.log_root = ET.Element("log")
+        self.setup_vfs()  # Инициализация VFS при создании экземпляра
 
     def setup_vfs(self):
+        """Настройка виртуальной файловой системы из tar-архива."""
         if os.path.exists(self.vfs_root):
             self._clear_vfs()
         os.makedirs(self.vfs_root)
@@ -22,8 +26,6 @@ class ShellEmulator:
         with tarfile.open(self.vfs_path, 'r') as tar:
             # Сохраняем информацию о членах архива без их извлечения
             self.members = tar.getmembers()
-            self.files = {}
-            
             for member in self.members:
                 if member.isfile():
                     # Читаем содержимое файла в памяти
@@ -32,8 +34,8 @@ class ShellEmulator:
 
         self.current_path = self.vfs_root
 
-
     def _clear_vfs(self):
+        """Очистка временной директории VFS."""
         for root, dirs, files in os.walk(self.vfs_root, topdown=False):
             for file in files:
                 os.remove(os.path.join(root, file))
@@ -42,20 +44,24 @@ class ShellEmulator:
         os.rmdir(self.vfs_root)
 
     def log_action(self, action, result):
+        """Запись действия в XML лог."""
         entry = ET.SubElement(self.log_root, "entry")
         ET.SubElement(entry, "action").text = action
         ET.SubElement(entry, "result").text = result
 
     def save_log(self):
+        """Сохранение лога в файл."""
         tree = ET.ElementTree(self.log_root)
         tree.write(self.log_path)
 
     def ls(self):
+        """Список файлов и папок в текущем каталоге."""
         result = "\n".join(os.listdir(self.current_path))
         self.log_action("ls", result)
         return result
 
     def cd(self, path):
+        """Изменение текущего каталога."""
         target_path = os.path.join(self.current_path, path)
         if os.path.isdir(target_path):
             self.current_path = target_path
@@ -66,6 +72,7 @@ class ShellEmulator:
         return result
 
     def rmdir(self, dir_name):
+        """Удаление пустой директории."""
         target_path = os.path.join(self.current_path, dir_name)
         if os.path.isdir(target_path):
             os.rmdir(target_path)
@@ -76,6 +83,7 @@ class ShellEmulator:
         return result
 
     def tree(self, path=None, level=0):
+        """Вывод дерева каталогов."""
         if path is None:
             path = self.current_path
         tree_structure = ""
@@ -88,6 +96,7 @@ class ShellEmulator:
         return tree_structure.strip()
 
     def exit(self):
+        """Выход из эмулятора."""
         self.save_log()
         self._clear_vfs()
         return "Exiting..."
@@ -106,6 +115,7 @@ class ShellGUI:
         self.run_startup_script()
 
     def run_startup_script(self):
+        """Запуск скрипта при старте."""
         if self.script_path and os.path.exists(self.script_path):
             with open(self.script_path, 'r') as script_file:
                 commands = script_file.readlines()
@@ -113,12 +123,14 @@ class ShellGUI:
                 self.handle_command(command.strip())
 
     def execute_command(self, event):
+        """Обработка ввода команды пользователем."""
         command = self.command_entry.get()
         self.command_entry.delete(0, END)
         result = self.handle_command(command)
         self.output.insert(END, f"$ {command}\n{result}\n")
 
     def handle_command(self, command):
+        """Обработка команды."""
         parts = command.split()
         if not parts:
             return ""
@@ -140,6 +152,7 @@ class ShellGUI:
             return f"{cmd}: command not found"
 
     def run(self):
+        """Запуск GUI."""
         self.root.mainloop()
 
 def main():
@@ -150,10 +163,9 @@ def main():
     args = parser.parse_args()
 
     emulator = ShellEmulator(args.vfs, args.log)
-    emulator.setup_vfs()
-
     gui = ShellGUI(emulator, args.script)
     gui.run()
 
 if __name__ == "__main__":
     main()
+
